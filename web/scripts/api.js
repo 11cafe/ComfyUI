@@ -339,6 +339,7 @@ class ComfyApi extends EventTarget {
 	 * @returns The fetch response
 	 */
 	createUser(username) {
+    return { status: 200, json: async () => ({}) };
 		return this.fetchApi("/users", {
 			method: "POST",
 			headers: {
@@ -353,6 +354,7 @@ class ComfyApi extends EventTarget {
 	 * @returns { Promise<string, unknown> } A dictionary of id -> value
 	 */
 	async getSettings() {
+    return {};
 		return (await this.fetchApi("/settings")).json();
 	}
 
@@ -362,6 +364,7 @@ class ComfyApi extends EventTarget {
 	 * @returns { Promise<unknown> } The setting value
 	 */
 	async getSetting(id) {
+    return null;
 		return (await this.fetchApi(`/settings/${encodeURIComponent(id)}`)).json();
 	}
 
@@ -476,4 +479,285 @@ class ComfyApi extends EventTarget {
 	}
 }
 
-export const api = new ComfyApi();
+import { app, getCurWorkflowID, setCurWorkflowID } from "./app.js";
+import {ComfyButton} from './ui/components/button.js';
+import { ComfyWorkflow } from "./workflows.js";
+import {serverNodeDefs} from '/serverNodeDefs.js'
+export class ServerlessComfyApi extends ComfyApi {
+	// DEFAULT_MACHINE = "XzJ8p9wqc9vnp3kwt991P";
+	machine = null;
+
+	async getNodeDefs() {
+		let machineID = new URLSearchParams(location.search).get("machine") ?? app.dbWorkflow?.machine_id;
+		console.log("💖Machine ID:", machineID);
+		if(!machineID) {
+			return serverNodeDefs;
+		}
+		if(!this.machine) {
+			this.machine = await fetch("/api/machine/getMachine?id="+ machineID)
+			.then((res) => res.json())
+			.then((data) => {
+				return data.data
+			});
+		}
+		const bt = new ComfyButton({
+			content: this.machine?.name ?? '❓Select Machine',
+			icon: "chevron-down",
+		});
+		bt.contentElement.style.display = "block";
+		app.menu?.settingsGroup?.append(bt)
+		return JSON.parse(this.machine?.object_info) ?? {};
+	}
+	async getUserConfig() {
+		localStorage.setItem("Comfy.userId", "default");
+		return { storage: "browser", users: {'default':{}} };
+		// return { storage: "browser", users: Promise.resolve({}), migrated: false };
+		return (await this.fetchApi("/users")).json();
+	}
+
+	validateRunnable(output, workflow) {
+		// validate workflow prompt deps first
+		const deps = workflow.extra.deps;
+		const res = {}
+		for (const nodeID of Object.keys(output)) {
+			const node = output[nodeID];
+			
+			if (node.inputs) {
+				Object.keys(node.inputs).forEach((inputName) => {
+					const value = node.inputs?.[inputName];
+					if (typeof value != "string") return;
+					// Check if it's a model file
+					if (modelFileExtensions.some((ext) => value.endsWith(ext))) {
+						if (!deps?.models?.[value]?.url || !deps?.models?.[value]?.folder) {
+							res.error = `Model file ${value} not found in deps`;
+						}
+					}
+					// Check if it's an image file
+					if (imageFileExtensions.some((ext) => value.endsWith(ext))) {
+						if (!deps?.images?.[value]?.url ) {
+							res.error = `Image file ${value} not found in deps`;
+						}
+					}
+				});
+			}
+		}
+		return res;
+	}
+	apiURL(route) {
+		
+		if(route.startsWith('/view?filename=')) {
+			console.log('view route', route);
+			const searchParams = new URLSearchParams(route.split('?')[1]);
+			console.log('filename', searchParams.get('filename'));
+			return app.graph.extra?.deps?.images?.[searchParams.get('filename')];
+		}
+		return this.api_base + route;
+	}
+	async queuePrompt(number, { output, workflow }) {
+		console.log('output',output,'workflow',workflow);
+		const body = {
+			client_id: this.clientId,
+			prompt: output,
+			extra_data: { extra_pnginfo: { workflow } },
+		};
+
+		if (number === -1) {
+			body.front = true;
+		} else if (number != 0) {
+			body.number = number;
+		}
+		if(!this.machine) {
+			throw new Error("Please select a machine to run on!");
+		}
+		const validRes = this.validateRunnable(output, workflow);
+		console.log('validate error', validRes)
+		if (validRes.error) {
+			alert(validRes.error);
+			return;
+		}
+		const deps = {...workflow.extra.deps, machine: {
+			id: this.machine.id,
+			snapshot: JSON.parse(this.machine.snapshot),
+		}};
+		const res = await fetch("/api/workflow/runWorkflow", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				input: {
+					prompt: output,
+					deps: deps,
+				},
+				workflowID: getCurWorkflowID(),
+				rp_endpoint_id: this.machine.rp_endpoint_id,
+			}),
+		}).then((res) => res.json());
+		console.log('run res', res);
+		if (res.error) {
+			throw new Error(res.error);
+		}
+		if(!res.data?.id) {
+			throw new Error("Error running workflow. Please try again");
+		}
+		window.open('/job/'+ res.data.id);
+	}
+	generateSimpleUID() {
+		return  Math.random().toString(36).slice(2,10);
+	}
+
+	fetchApi(route, options) {
+		if (route === '/upload/image') {
+			// uploading to server
+			return fetch('/api/image/upload', {
+				method: 'POST',
+				body: options.body,
+			}).then(resp=> resp.json()).then(res => {
+				console.log('upload image response', res);
+				const fileName = Object.keys(res)[0];
+				if(!app.graph.extra.deps) {
+					app.graph.extra.deps = {};
+				}
+				if(!app.graph.extra.deps.images) {
+					app.graph.extra.deps.images = {};
+				}
+				app.graph.extra.deps.images[fileName] = res[fileName];
+				return {
+					status: 200,
+					json: () => Promise.resolve({
+						name: fileName,
+					}),
+				}
+
+			});
+		}
+		return {
+			status: 404,
+			json: () => Promise.resolve({
+				status: 404,
+			}),
+		}
+	}
+	async init() {
+		this.clientId = this.initialClientId ?? this.generateSimpleUID();
+		sessionStorage.setItem("clientId", this.clientId);
+	}
+	async getExtensions() {
+		const COMFYUI_CORE_EXTENSIONS = [
+		  "/extensions/core/clipspace.js",
+		  "/extensions/core/colorPalette.js",
+		  "/extensions/core/contextMenuFilter.js",
+		  "/extensions/core/dynamicPrompts.js",
+		  "/extensions/core/editAttention.js",
+		  "/extensions/core/groupNode.js",
+		  "/extensions/core/groupNodeManage.js",
+		  "/extensions/core/groupOptions.js",
+		  "/extensions/core/invertMenuScrolling.js",
+		  "/extensions/core/keybinds.js",
+		  "/extensions/core/linkRenderMode.js",
+		  "/extensions/core/maskeditor.js",
+		  "/extensions/core/nodeTemplates.js",
+		  "/extensions/core/noteNode.js",
+		  "/extensions/core/rerouteNode.js",
+		  "/extensions/core/saveImageExtraOutput.js",
+		  '/extensions/core/simpleTouchSupport.js',
+		  "/extensions/core/slotDefaults.js",
+		  "/extensions/core/snapToGrid.js",
+		  "/extensions/core/uploadImage.js",
+		  "/extensions/core/widgetInputs.js",
+		]
+			// const resp = await this.fetchApi("/extensions", { cache: "no-store" });
+			// return await resp.json();
+		return COMFYUI_CORE_EXTENSIONS
+	}
+	async getUserConfig() {
+		localStorage.setItem("Comfy.userId", "default");
+		return { storage: "browser", users: {'default':{}} };
+	}
+	/** @param {string} file    */
+	async storeUserData(file, data, options = { overwrite: true, stringify: true, throwOnError: true }) {
+		if(file.startsWith('workflows/')) {
+			// saving workflow
+			console.log('saving workflow app.graph', JSON.parse(data));
+			const graph = app.graph.serialize();
+			let curWorkflowID = getCurWorkflowID();
+			if (!curWorkflowID) {
+				// create workflow
+				const filename = file.match(/(?<=workflows\/)[^/]+(?=\.json)/);
+				const resp = await fetch(`/api/workflow/createWorkflow`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						name: filename,
+						json: JSON.stringify(graph),
+						machine_id: this.machine.id,
+					})
+				}).then((res) => res.json());
+				if(resp.error || !resp.data.id) {
+					alert(`❌Error saving workflow: ${resp.error}`);
+					return;
+				}
+				setCurWorkflowID(resp.data.id);
+				graph.extra.workflow_id = resp.data.id;
+				const comfyworkflow = new ComfyWorkflow(app.workflowManager, filename+'.json', [filename+'.json']);
+				app.workflowManager.setWorkflow(comfyworkflow)
+				return;
+			} 
+			if (!app.graph.extra.workflow_id) {
+				graph.extra.workflow_id = curWorkflowID;
+			} else if(graph.extra.workflow_id !== curWorkflowID) {
+				alert(`❌Error saving workflow: workspace id mismatch!! URL ID [${curWorkflowID}], Graph ID [${graph.extra.workspace_info.id}]`);
+				return;
+			}
+			const resp = await fetch(`/api/workflow/updateWorkflow`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					id: curWorkflowID,
+					updateData: {
+						json: JSON.stringify(graph),
+					}
+				})
+			}).then((res) => res.json());
+			console.log('workflow saved',resp);
+		}
+	}
+}
+
+export const modelFileExtensions = [
+	".ckpt",
+	".pt",
+	".bin",
+	".pth",
+	".safetensors",
+  ];
+export const imageFileExtensions = [".jpeg", ".jpg", ".png", ".gif", ".webp"];
+
+export let api = new ServerlessComfyApi();
+
+window.addEventListener("message", (event) => {
+	if (event.data.type === "editor_selected_model") {
+		const node  = app.graph.getNodeById(event.data.data.nodeID);
+		const modelName = event.data.data.model.name;
+		const widget = node.widgets.find((w) => w.name === event.data.data.inputName);
+		const originalVal = widget.value;
+		widget.value = modelName;
+		if(!app.graph.extra.deps) {
+			app.graph.extra.deps = {};
+		}
+		if(!app.graph.extra.deps.models) {
+			app.graph.extra.deps.models = {};
+		}
+		delete app.graph.extra.deps.models[originalVal];
+		app.graph.extra.deps.models[modelName] = {
+			url: event.data.data.model.url,
+			folder: event.data.data.model.folder,
+			hash: event.data.data.model.hash,
+		}
+		
+	}
+  });

@@ -361,7 +361,9 @@ export const ComfyWidgets = {
 	},
 	COMBO(node, inputName, inputData) {
 		const type = inputData[0];
+		
 		let defaultValue = type[0];
+		console.log('combotype',type, 'defaultValue', type[0])
 		if (inputData[1] && inputData[1].default) {
 			defaultValue = inputData[1].default;
 		}
@@ -528,4 +530,38 @@ export const ComfyWidgets = {
 
 		return { widget: uploadWidget };
 	},
+};
+
+ComfyWidgets.COMBO = (node, inputName, inputData) => {
+	const type = inputData[0];
+	
+	let defaultValue = type[0];
+	if (inputData[1] && inputData[1].default) {
+		defaultValue = inputData[1].default;
+	}
+	const res = { widget: node.addWidget("combo", inputName, defaultValue, () => {}, { values: type }) };
+	if (inputData[1]?.control_after_generate) {
+		res.widget.linkedWidgets = addValueControlWidgets(node, res.widget, undefined, undefined, inputData);
+	}
+
+	const modelFileExtensions = [
+		".ckpt",
+		".pt",
+		".bin",
+		".pth",
+		".safetensors",
+	  ];
+	const defaultExtension = defaultValue.split(".").pop();
+	if (modelFileExtensions.includes("."+defaultExtension)) {
+		const modelSelectWideget = node.addWidget("button", "model_selector", "select_model", () => {
+			console.log("click select model");
+			window.parent.postMessage({ type: "editor_select_model", data: {
+				nodeID: node.id,
+				inputName: inputName,
+			} }, "*");
+		});
+		modelSelectWideget.label = "Select Model";
+		modelSelectWideget.serialize = false;
+	}
+	return res;
 };

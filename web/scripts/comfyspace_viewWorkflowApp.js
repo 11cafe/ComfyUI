@@ -2,8 +2,9 @@ import { ComfyLogging } from "./logging.js";
 import { ComfyWidgets, initWidgets } from "./widgets.js";
 import { ComfyUI, $el } from "./ui.js";
 import { api } from "./api.js";
+import {app} from "./app.js";
 import { defaultGraph } from "./defaultGraph.js";
-import { getPngMetadata, getWebpMetadata, getFlacMetadata, importA1111, getLatentMetadata } from "./pnginfo.js";
+import { getPngMetadata, getWebpMetadata, importA1111, getLatentMetadata } from "./pnginfo.js";
 import { addDomClippingSetting } from "./domWidget.js";
 import { createImageHost, calculateImageGrid } from "./ui/imagePreview.js";
 import { ComfyAppMenu } from "./ui/menu/index.js";
@@ -29,8 +30,15 @@ function sanitizeNodeName(string) {
 /**
  * @typedef {import("types/comfy").ComfyExtension} ComfyExtension
  */
+import { ComfySettingsDialog } from "./ui/settings.js";
+export class CustomComfyUI {
+	constructor(app) {
+		this.app = app;
+		this.settings = new ComfySettingsDialog(app);
+	}
+}
 
-export class ComfyApp {
+export class ComfyViewWorkflowApp {
 	/**
 	 * List of entries to queue
 	 * @type {{number: number, batchCount: number}[]}
@@ -52,14 +60,14 @@ export class ComfyApp {
 	static clipspace_return_node = null;
 
 	constructor() {
-		this.ui = new ComfyUI(this);
-		this.logging = new ComfyLogging(this);
-		this.workflowManager = new ComfyWorkflowManager(this);
+		this.ui = new CustomComfyUI(this);
+		// this.logging = new ComfyLogging(this);
+		// this.workflowManager = new ComfyWorkflowManager(this);
 		this.bodyTop = $el("div.comfyui-body-top", { parent: document.body });
 		this.bodyLeft = $el("div.comfyui-body-left", { parent: document.body });
 		this.bodyRight = $el("div.comfyui-body-right", { parent: document.body });
 		this.bodyBottom = $el("div.comfyui-body-bottom", { parent: document.body });		  
-		this.menu = new ComfyAppMenu(this);
+		// this.menu = new ComfyAppMenu(this);
 
 		/**
 		 * List of extensions that are registered with the app
@@ -71,7 +79,7 @@ export class ComfyApp {
 		 * Stores the execution output data for each node
 		 * @type {Record<string, any>}
 		 */
-		this._nodeOutputs = {};
+		this.nodeOutputs = {};
 
 		/**
 		 * Stores the preview image data for each node
@@ -84,15 +92,6 @@ export class ComfyApp {
 		 * @type {boolean}
 		 */
 		this.shiftDown = false;
-	}
-
-	get nodeOutputs() {
-		return this._nodeOutputs;
-	}
-
-	set nodeOutputs(value) {
-		this._nodeOutputs = value;
-		this.#invokeExtensions("onNodeOutputsUpdated", value);
 	}
 
 	getPreviewFormatParam() {
@@ -1084,7 +1083,7 @@ export class ComfyApp {
 			if (e.type == "keydown" && !e.repeat) {
 
 				// Ctrl + M mute/unmute
-				if (e.key === 'm' && (e.metaKey || e.ctrlKey)) {
+				if (e.key === 'm' && e.ctrlKey) {
 					if (this.selected_nodes) {
 						for (var i in this.selected_nodes) {
 							if (this.selected_nodes[i].mode === 2) { // never
@@ -1098,7 +1097,7 @@ export class ComfyApp {
 				}
 
 				// Ctrl + B bypass
-				if (e.key === 'b' && (e.metaKey || e.ctrlKey)) {
+				if (e.key === 'b' && e.ctrlKey) {
 					if (this.selected_nodes) {
 						for (var i in this.selected_nodes) {
 							if (this.selected_nodes[i].mode === 4) { // never
@@ -1445,7 +1444,7 @@ export class ComfyApp {
 	 */
 	async #loadExtensions() {
 	    const extensions = await api.getExtensions();
-	    this.logging.addEntry("Comfy.App", "debug", { Extensions: extensions });
+	    // this.logging.addEntry("Comfy.App", "debug", { Extensions: extensions });
 	
 	    const extensionPromises = extensions.map(async ext => {
 	        try {
@@ -1456,11 +1455,11 @@ export class ComfyApp {
 	    });
 	
 	    await Promise.all(extensionPromises);
-		try {
-			this.menu.workflows.registerExtension(this);
-		} catch (error) {
-			console.error(error);
-		}
+		// try {
+		// 	this.menu.workflows.registerExtension(this);
+		// } catch (error) {
+		// 	console.error(error);
+		// }
 	}
 
 	async #migrateSettings() {
@@ -1547,7 +1546,7 @@ export class ComfyApp {
 	 * Set up the app on the page
 	 */
 	async setup() {
-		await this.#setUser();
+		// await this.#setUser();
 
 		// Create and mount the LiteGraph in the DOM
 		const mainCanvas = document.createElement("canvas")
@@ -1557,14 +1556,14 @@ export class ComfyApp {
 		document.body.append(canvasEl);
 		this.resizeCanvas();
 
-		await Promise.all([this.workflowManager.loadWorkflows(), this.ui.settings.load()]);
+		// await Promise.all([this.workflowManager.loadWorkflows(), this.ui.settings.load()]);
 		await this.#loadExtensions();
 
-		addDomClippingSetting();
+		// addDomClippingSetting();
 		this.#addProcessMouseHandler();
 		this.#addProcessKeyHandler();
 		this.#addConfigureHandler();
-		this.#addApiUpdateHandlers();
+		// this.#addApiUpdateHandlers();
 		this.#addRestoreWorkflowView();
 
 		this.graph = new LGraph();
@@ -1588,42 +1587,56 @@ export class ComfyApp {
 		ro.observe(this.bodyRight);
 		ro.observe(this.bodyBottom);
 
+		// fetch and load workflow by ID
+		const queryParams = new URLSearchParams(window.location.search);
+		const workflowVersionID = queryParams.get('workflowVersionID');
+		const workflowVer = await fetch("/api/getCloudflowVersion/?id=" + workflowVersionID, {
+			headers: {
+				"Content-Type": "application/json",
+			},
+		})
+		.then((response) => {
+			return response.json();
+		})
+		.then(async (data) => {
+			const workflowVer = data.data;
+			return workflowVer;
+		})
+		.catch((error) => {
+			console.error(error);
+		});
+		if(!workflowVer) {
+			throw new Error("No workflow version found");
+		}
+		this.nodeDefs = JSON.parse(workflowVer.nodeDefs);
+		//// end of fetching workflow version //////
+
 		await this.#invokeExtensionsAsync("init");
 		await this.registerNodes();
 		initWidgets(this);
 
 		// Load previous workflow
-		let restored = false;
-		try {
-			const loadWorkflow = async (json) => {
-				if (json) {
-					const workflow = JSON.parse(json);
-					const workflowName = getStorageValue("Comfy.PreviousWorkflow");
-					await this.loadGraphData(workflow, true, true, workflowName);
-					return true;
+
+		const jsonObj = JSON.parse(workflowVer.json);
+		await this.loadGraphData(jsonObj, true);
+		setTimeout(async () => {
+			if(!jsonObj.extra?.apiPrompt && !workflowVer.api_prompt && !jsonObj.extra?.workspace_info?.apiPrompt) {
+				const p = await this.graphToPrompt();
+				if(p.output) {
+					jsonObj.apiPrompt = p.output
+					await fetch("/api/workflow/updateWorkflowVersion", {
+						method: "POST",
+						headers: {
+						"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+						id: workflowVersionID,
+						api_prompt:JSON.stringify(p.output),
+						}),
+					});
 				}
-			};
-			const clientId = api.initialClientId ?? api.clientId;
-			restored =
-				(clientId && (await loadWorkflow(sessionStorage.getItem(`workflow:${clientId}`)))) ||
-				(await loadWorkflow(localStorage.getItem("workflow")));
-		} catch (err) {
-			console.error("Error loading previous workflow", err);
-		}
 
-		// We failed to restore a workflow so load the default
-		if (!restored) {
-			await this.loadGraphData();
-		}
-
-		// Save current workflow automatically
-		setInterval(() => {
-			const workflow = JSON.stringify(this.graph.serialize());
-			localStorage.setItem("workflow", workflow);
-			if (api.clientId) {
-				sessionStorage.setItem(`workflow:${api.clientId}`, workflow);
-			}
-		}, 1000);
+		}}, 1);
 
 		this.#addDrawNodeHandler();
 		this.#addDrawGroupsHandler();
@@ -1654,7 +1667,8 @@ export class ComfyApp {
 	async registerNodes() {
 		const app = this;
 		// Load node definitions from the backend
-		const defs = await api.getNodeDefs();
+		const serverDefs = await api.getNodeDefs();
+		const defs = Object.assign({}, this.nodeDefs, serverDefs);
 		await this.registerNodesFromDefs(defs);
 		await this.#invokeExtensionsAsync("registerCustomNodes");
 	}
@@ -1797,6 +1811,7 @@ export class ComfyApp {
 	}
 
 	showMissingNodesError(missingNodeTypes, hasAddedNodes = true) {
+		return;
 		let seenTypes = new Set();
 
 		this.ui.dialog.show(
@@ -1965,14 +1980,6 @@ export class ComfyApp {
 						if (widget.name == "sampler_name") {
 							if (widget.value.startsWith("sample_")) {
 								widget.value = widget.value.slice(7);
-							}
-							if (widget.value === "euler_pp" || widget.value === "euler_ancestral_pp") {
-								widget.value = widget.value.slice(0, -3);
-								for (let w of node.widgets) {
-									if (w.name == "cfg") {
-										w.value *= 2.0;
-									}
-								}
 							}
 						}
 					}
@@ -2292,19 +2299,6 @@ export class ComfyApp {
 			} else {
 				this.showErrorOnFileLoad(file);
 			}
-		} else if (file.type === "audio/flac" || file.type === "audio/x-flac") {
-			const pngInfo = await getFlacMetadata(file);
-			// Support loading workflows from that webp custom node.
-			const workflow = pngInfo?.workflow;
-			const prompt = pngInfo?.prompt;
-
-			if (workflow) {
-				this.loadGraphData(JSON.parse(workflow), true, true, fileName);
-			} else if (prompt) {
-				this.loadApiJson(JSON.parse(prompt), fileName);
-			} else {
-				this.showErrorOnFileLoad(file);
-			}
 		} else if (file.type === "application/json" || file.name?.endsWith(".json")) {
 			const reader = new FileReader();
 			reader.onload = async () => {
@@ -2314,14 +2308,14 @@ export class ComfyApp {
 				} else if(this.isApiJson(jsonContent)) {
 					this.loadApiJson(jsonContent, fileName);
 				} else {
-					await this.loadGraphData(jsonContent, true, true, fileName);
+					await this.loadGraphData(jsonContent, true, fileName);
 				}
 			};
 			reader.readAsText(file);
 		} else if (file.name?.endsWith(".latent") || file.name?.endsWith(".safetensors")) {
 			const info = await getLatentMetadata(file);
 			if (info.workflow) {
-				await this.loadGraphData(JSON.parse(info.workflow), true, true, fileName);
+				await this.loadGraphData(JSON.parse(info.workflow), true, fileName);
 			} else if (info.prompt) {
 				this.loadApiJson(JSON.parse(info.prompt));
 			} else {
@@ -2456,39 +2450,3 @@ export class ComfyApp {
 	}
 }
 
-
-export async function loadModuleBasedOnPath() {
-  const queryParams = new URLSearchParams(window.location.search);
-  const workflowVersionID = queryParams.get('workflowVersionID');
-  const packageID = queryParams.get('packageID');
-  if(workflowVersionID !== null) {
-    const {ComfyViewWorkflowApp} = await import("./comfyspace_viewWorkflowApp.js");
-    app = new ComfyViewWorkflowApp();
-  } else if(packageID !=null) {
-    const {ComfyViewNodePackageApp} = await import("./comfyspace_viewNodePackageApp.js");
-    app = new ComfyViewNodePackageApp();
-  } else {
-    // For any other path, import app.js and perform setup
-    app = new ComfyApp()
-  }
-}
-
-/** @type {ComfyApp} */
-export let app = null;
-
-export function getCurWorkflowID() {
-	const editWorkflowID = new URLSearchParams(window.location.search).get("editWorkflowID");
-	return !!editWorkflowID?.length ? editWorkflowID : null;
-}
-
-export function setCurWorkflowID(id) {
-	// set iframe url
-	const url = new URL(window.location.href);
-	const searchParams = url.searchParams;
-	searchParams.set('editWorkflowID', id);
-	window.history.pushState({}, '', url);
-
-	// set nextjs window url
-	window.parent.postMessage({ type: 'change_url', url:`/comfyui/${id}?machine=${api.machine.id}` }, '*');
-	
-}

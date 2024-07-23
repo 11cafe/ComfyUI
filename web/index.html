@@ -11,10 +11,56 @@
 		<script type="text/javascript" src="./lib/litegraph.core.js"></script>
 		<script type="text/javascript" src="./lib/litegraph.extensions.js" defer></script>
 		<script type="module">
-			import { app } from "./scripts/app.js";
+			import { app, loadModuleBasedOnPath,getCurWorkflowID } from "./scripts/app.js";
+			import { api } from "./scripts/api.js";
+			await loadModuleBasedOnPath();
+			const editWorkflowID = getCurWorkflowID();
+			let workflow = null;
+			let graph = null;
+			console.log('editWorkflowID', editWorkflowID)
+			if(editWorkflowID) {
+				let machineID = new URLSearchParams(location.search).get("machine");
+				const [machine, workflowResp] = await Promise.all([
+					machineID ? fetch("/api/machine/getMachine?id="+ machineID)
+						.then((res) => res.json())
+						.then((data) => {
+							return data.data
+						}) : null,
+					fetch('/api/workflow/getWorkflowWithVersion?id='+editWorkflowID).then(res => res.json())
+				])
+				
+				if (!workflowResp?.data?.json) {
+					window.location.href = '/404';
+				}
+				workflow = workflowResp;
+				graph = JSON.parse(workflow.data.json);
+				graph.extra.workflow_id = editWorkflowID;
+				api.machine = machine;
+			}
+			
 			await app.setup();
 			window.app = app;
 			window.graph = app.graph;
+			app.menu?.updatePosition('top');
+			import {ComfyWorkflow} from './scripts/workflows.js'
+			if(workflow ) {
+				app.dbWorkflow = workflow;
+				
+				const fileName = workflow.data.name;
+				const comfyworkflow = new ComfyWorkflow(app.workflowManager, fileName, [fileName]);
+				// const cachedWorkflow = JSON.parse(sessionStorage.getItem(`workflow:${api.initialClientId}`));
+				if (app.graph.extra.workflow_id !== editWorkflowID) {
+					console.log('loading graph from db value')
+					await app.loadGraphData(graph, true, true,  comfyworkflow);
+				} else {
+					console.log('loadin graph from session storage cache')
+					app.workflowManager.setWorkflow(comfyworkflow);
+				}
+				
+			} 
+			
+
+
 		</script>
 	</head>
 	<body class="litegraph">

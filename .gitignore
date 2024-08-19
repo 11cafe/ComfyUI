@@ -19,3 +19,4 @@ venv/
 /user/
 *.log
 web_custom_versions/
+!/web/extensions/workspace-manager/

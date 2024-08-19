@@ -11,10 +11,55 @@
 		<script type="text/javascript" src="./lib/litegraph.core.js"></script>
 		<script type="text/javascript" src="./lib/litegraph.extensions.js" defer></script>
 		<script type="module">
-			import { app } from "./scripts/app.js";
+			import { app, loadModuleBasedOnPath } from "./scripts/app.js";
+			await loadModuleBasedOnPath();
+			import { api } from "./scripts/api.js";
+			const editWorkflowID = api.getCurWorkflowID();
+			let graph = null;
+			let machineID = new URLSearchParams(location.search).get("machine");
+			const [machine, workflow] = await Promise.all([
+				machineID && fetch("/api/machine/getMachine?id="+ machineID)
+					.then((res) => res.json())
+					.then((data) => {
+						return data.data
+					}),
+				editWorkflowID && fetch('/api/workflow/getWorkflowWithVersion?id='+editWorkflowID).then(res => res.json())
+			])
+			console.log('machine', machine, 'workflow', workflow)
+			
+			if (editWorkflowID && !workflow?.data?.json) {
+				window.location.href = '/404';
+			}
+
+			graph = JSON.parse(workflow?.data?.json ?? '{"extra":{}}');
+			graph.extra.workflow_id = editWorkflowID;
+			api.machine = machine;
+			window.dispatchEvent(new CustomEvent('get_machine_workflow', {detail: {workflow: workflow?.data, machine: machine}}));
+		
+			
 			await app.setup();
 			window.app = app;
 			window.graph = app.graph;
+			app.menu?.updatePosition('top');
+			import {ComfyWorkflow} from './scripts/workflows.js'
+			if(workflow ) {
+				app.dbWorkflow = workflow.data;
+				
+				const fileName = workflow.data.name;
+				const comfyworkflow = new ComfyWorkflow(app.workflowManager, fileName, [fileName]);
+				// const cachedWorkflow = JSON.parse(sessionStorage.getItem(`workflow:${api.initialClientId}`));
+				if (app.graph.extra.workflow_id !== editWorkflowID) {
+					console.log('loading graph from db value')
+					await app.loadGraphData(graph, true, true,  comfyworkflow);
+				} else {
+					console.log('loadin graph from session storage cache')
+					app.workflowManager.setWorkflow(comfyworkflow);
+				}
+				
+			} 
+			
+
+
 		</script>
 	</head>
 	<body class="litegraph">

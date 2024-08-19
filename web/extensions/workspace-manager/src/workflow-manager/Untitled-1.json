@@ -1,0 +1,170 @@
+{
+  "comfyui": "449bf52923896236ed645da2ff05aadbf2b0d536",
+  "models": {
+    "vae/vae-ft-mse-840000-ema-pruned.safetensors": {
+      "url": "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors"
+    },
+    "checkpoints/dreamshaper_8.safetensors": {
+      "url": "https://huggingface.co/digiplay/DreamShaper_8/resolve/main/dreamshaper_8.safetensors"
+    },
+    "upscale_models/RRDB_ESRGAN_x4.pth": {
+      "url": "https://huggingface.co/kadirnar/RRDB_ESRGAN_x4/resolve/main/RRDB_ESRGAN_x4.pth"
+    },
+    "ipadapter/ip-adapter_sd15_vit-G.safetensors": {
+      "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15_vit-G.safetensors"
+    },
+    "clip_vision/CLIP-ViT-bigG-14-laion2B-39B-b160k.safetensors": {
+      "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/image_encoder/model.safetensors"
+    },
+    "loras/AnimateLCM_sd15_t2v_lora.safetensors": {
+      "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors"
+    },
+    "animatediff_models/AnimateLCM_sd15_t2v.ckpt": {
+      "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt"
+    },
+    "controlnet/control_v11p_sd15_openpose.pth": {
+      "url": "https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_openpose.pth"
+    },
+    "controlnet/control_v1p_sd15_qrcode_monster.safetensors": {
+      "url": "https://huggingface.co/monster-labs/control_v1p_sd15_qrcode_monster/resolve/main/control_v1p_sd15_qrcode_monster.safetensors"
+    }
+  },
+  "git_custom_nodes": {
+    "https://github.com/AIGODLIKE/AIGODLIKE-ComfyUI-Translation": {
+      "hash": "8fb5ca2f382ec406e483c1d8d40d881c01bb2e7b",
+      "disabled": false
+    },
+    "https://github.com/M1kep/ComfyLiterals": {
+      "hash": "bdddb08ca82d90d75d97b1d437a652e0284a32ac",
+      "disabled": false
+    },
+    "https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet": {
+      "hash": "98768c7c3c45ac1e803071c5ad8e675e360e9e73",
+      "disabled": false
+    },
+    "https://github.com/Nourepide/ComfyUI-Allor": {
+      "hash": "af9caecc2a4e3d432be6aa8b7826da0bc1bb420c",
+      "disabled": false
+    },
+    "https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved": {
+      "hash": "4dd592e9fce9ac59edadee40cf4d2069165dc226",
+      "disabled": false
+    },
+    "https://github.com/crystian/ComfyUI-Crystools": {
+      "hash": "8c257748b98f59357ac20cebd4b4b67c0a9e53fe",
+      "disabled": false
+    },
+    "https://github.com/pythongosssss/ComfyUI-Custom-Scripts": {
+      "hash": "b4a9cebf24b50c4b538945ae86c17a9dc24052a8",
+      "disabled": false
+    },
+    "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation": {
+      "hash": "a35c620f3ef15ff5a6ab797e45b97d3fe8e07799",
+      "disabled": false
+    },
+    "https://github.com/ltdrdata/ComfyUI-Impact-Pack": {
+      "hash": "949fa3aedbb77cfd0f223260ca4576f5bb700ccd",
+      "disabled": false
+    },
+    "https://github.com/ltdrdata/ComfyUI-Inspire-Pack": {
+      "hash": "9506150afce2416c35206e39c4eeeb287a539f31",
+      "disabled": false
+    },
+    "https://github.com/theUpsider/ComfyUI-Logic": {
+      "hash": "ba753246ba7f11ca935a68b16c5ad83317edc089",
+      "disabled": false
+    },
+    "https://github.com/Fannovel16/ComfyUI-Loopchain": {
+      "hash": "9cdd2c05e5f8bcac6e1effd03b4a87f1bda266b5",
+      "disabled": false
+    },
+    "https://github.com/ltdrdata/ComfyUI-Manager.git": {
+      "hash": "626aad2b00e777261c808a323baa7e62230c073d",
+      "disabled": false
+    },
+    "https://github.com/kijai/ComfyUI-Marigold": {
+      "hash": "42820b9c1401f676684215dbebf50cec5cddee2e",
+      "disabled": false
+    },
+    "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite": {
+      "hash": "e1c4e939ec942117183233da7fece1be498e61e8",
+      "disabled": false
+    },
+    "https://github.com/pythongosssss/ComfyUI-WD14-Tagger": {
+      "hash": "ae1102af3d415ed787e3a8bd0ae736abdf7885e6",
+      "disabled": false
+    },
+    "https://github.com/11cafe/comfyui-workspace-manager": {
+      "hash": "6fd98b12dba8cf38938532f90c2698673ddd3f33",
+      "disabled": false
+    },
+    "https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git": {
+      "hash": "d78b780ae43fcf8c6b7c6505e6ffb4584281ceca",
+      "disabled": false
+    },
+    "https://github.com/Fannovel16/comfyui_controlnet_aux": {
+      "hash": "16a4bc51da30ae5bdc18aa7cad4aa1ffa9bec01f",
+      "disabled": false
+    },
+    "https://github.com/AlekPet/ComfyUI_Custom_Nodes_AlekPet": {
+      "hash": "2595d06449315b1429ff7dbac7ff89b229d4f147",
+      "disabled": false
+    },
+    "https://github.com/cubiq/ComfyUI_essentials": {
+      "hash": "8727258f04be6647d7b9013993d1d335acf84169",
+      "disabled": false
+    },
+    "https://github.com/comfyanonymous/ComfyUI_experiments": {
+      "hash": "934dba9d206e4738e0dac26a09b51f1dffcb4e44",
+      "disabled": false
+    },
+    "https://github.com/FizzleDorf/ComfyUI_FizzNodes": {
+      "hash": "2ad19c1c3ad424b732fa0bc16ffb02284676a5da",
+      "disabled": false
+    },
+    "https://github.com/cubiq/ComfyUI_IPAdapter_plus": {
+      "hash": "df8c78b6bfe8450bdeed1209dfb3f94c9c59773a",
+      "disabled": false
+    },
+    "https://github.com/BlenderNeko/ComfyUI_TiledKSampler": {
+      "hash": "4fcc003f62efdbdec2f79eab37e1fb8dd84bac64",
+      "disabled": false
+    },
+    "https://github.com/TinyTerra/ComfyUI_tinyterraNodes": {
+      "hash": "587d327699989f8fc83805093f24d1dbb9487036",
+      "disabled": false
+    },
+    "https://github.com/ssitu/ComfyUI_UltimateSDUpscale": {
+      "hash": "bcefc5b1c412ff13c4209a6bf82215fc6ead12f3",
+      "disabled": false
+    },
+    "https://github.com/kohya-ss/ControlNet-LLLite-ComfyUI": {
+      "hash": "103a4457d44fe0d3be586c6d6b32ec5ccdbd0793",
+      "disabled": false
+    },
+    "https://github.com/Derfuu/Derfuu_ComfyUI_ModdedNodes": {
+      "hash": "2ace4c463d5b2063de35e46ebb9bd3f10e2d34b4",
+      "disabled": false
+    },
+    "https://github.com/jags111/efficiency-nodes-comfyui": {
+      "hash": "a6df20f4c60af49f08bbe122bc486c286f5d0745",
+      "disabled": false
+    },
+    "https://github.com/WASasquatch/FreeU_Advanced": {
+      "hash": "3ce68d4a1289aa8b89e7fe69e11917fe0229f9e6",
+      "disabled": false
+    },
+    "https://github.com/LEv145/images-grid-comfy-plugin": {
+      "hash": "8115be47714b2f222cb455e247718fff5e32d3c6",
+      "disabled": false
+    },
+    "https://github.com/WASasquatch/PowerNoiseSuite": {
+      "hash": "72b3f508664af4515356f6b03754542690b252b8",
+      "disabled": false
+    },
+    "https://github.com/Stability-AI/stability-ComfyUI-nodes": {
+      "hash": "001154622564b17223ce0191803c5fff7b87146c",
+      "disabled": false
+    }
+  }
+}

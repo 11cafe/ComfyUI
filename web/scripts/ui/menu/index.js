@@ -132,8 +132,8 @@ export class ComfyAppMenu {
 		});
 
 		this.element = $el("nav.comfyui-menu.lg", { style: { display: "none" } }, [
-			this.logo,
-			this.workflows.element,
+			// this.logo,
+			// this.workflows.element,
 			this.saveButton.element,
 			collapseOnMobile(this.actionsGroup).element,
 			$el("section.comfyui-menu-push"),
